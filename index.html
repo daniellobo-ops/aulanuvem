@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minhas Tarefas - To-Do List</title>
+    <!-- Fontes Google Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              primary: {
+                50: '#eef2ff',
+                100: '#e0e7ff',
+                500: '#6366f1',
+                600: '#4f46e5',
+                700: '#4338ca',
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      /* Estilos e animações customizadas */
+      body {
+        font-family: 'Inter', sans-serif;
+        background: linear-gradient(
+          135deg,
+          #f8fafc 0%,
+          #e0e7ff 50%,
+          #f1f5f9 100%
+        );
+        min-height: 100vh;
+      }
+
+      /* Animações de entrada e saída de tarefas */
+      .task-item {
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .task-enter {
+        opacity: 0;
+        transform: translateY(-12px) scale(0.98);
+      }
+
+      .task-enter-active {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+
+      .task-exit {
+        opacity: 0;
+        transform: scale(0.92);
+        max-height: 0;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        border: none !important;
+        overflow: hidden;
+      }
+
+      /* Checkbox customizado */
+      .custom-checkbox {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 1.35rem;
+        height: 1.35rem;
+        border: 2px solid #cbd5e1;
+        border-radius: 0.4rem;
+        outline: none;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .custom-checkbox:hover {
+        border-color: #6366f1;
+        background-color: #eef2ff;
+      }
+
+      .custom-checkbox:checked {
+        background-color: #6366f1;
+        border-color: #6366f1;
+      }
+
+      .custom-checkbox:checked::after {
+        content: '';
+        width: 6px;
+        height: 10px;
+        border: solid white;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg) translate(-1px, -1px);
+      }
+
+      /* Scrollbar suave */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 9999px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+    </style>
+  </head>
+  <body
+    class="h-full flex items-center justify-center p-4 sm:p-6 md:p-10 text-slate-800"
+  >
+    <div
+      class="w-full max-w-xl bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl shadow-indigo-200/50 border border-white/60 p-6 sm:p-8 flex flex-col max-h-[90vh]"
+    >
+      <!-- Cabeçalho com Título e Data -->
+      <header class="mb-6 flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h1
+            class="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent flex items-center gap-2"
+          >
+            <svg
+              class="w-8 h-8 text-indigo-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2.2"
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+            Minhas Tarefas
+          </h1>
+          <p
+            class="text-xs sm:text-sm text-slate-500 font-medium mt-1"
+            id="current-date"
+          >
+            Organize seu dia com facilidade
+          </p>
+        </div>
+        <span
+          class="text-xs font-semibold px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100/80 shadow-sm"
+          id="header-badge"
+        >
+          Produtividade
+        </span>
+      </header>
+
+      <!-- Formulário para Adicionar Tarefa -->
+      <form id="todo-form" class="relative mb-6">
+        <div
+          class="flex items-center bg-slate-50 hover:bg-slate-100/80 focus-within:bg-white border-2 border-slate-200 focus-within:border-indigo-500 rounded-2xl p-1.5 transition-all duration-200 shadow-inner"
+        >
+          <input
+            type="text"
+            id="todo-input"
+            placeholder="O que você precisa fazer hoje?"
+            class="w-full bg-transparent px-3 py-2 text-sm sm:text-base text-slate-700 focus:outline-none placeholder:text-slate-400 font-medium"
+            autocomplete="off"
+            maxlength="120"
+          />
+          <button
+            type="submit"
+            id="add-btn"
+            class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold px-4 py-2.5 rounded-xl text-sm flex items-center gap-1.5 shadow-md shadow-indigo-200 transition-all duration-200 shrink-0"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2.5"
+                d="M12 4v16m8-8H4"
+              ></path>
+            </svg>
+            <span>Adicionar</span>
+          </button>
+        </div>
+        <div
+          id="input-error"
+          class="hidden text-xs text-rose-500 font-medium mt-1.5 ml-2 transition-all"
+        >
+          Por favor, digite uma tarefa válida.
+        </div>
+      </form>
+
+      <!-- Barra de Filtros -->
+      <div
+        class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3"
+      >
+        <div
+          class="flex bg-slate-100/80 p-1 rounded-xl text-xs sm:text-sm font-medium text-slate-600"
+          id="filter-container"
+        >
+          <button
+            data-filter="all"
+            class="filter-btn px-3 py-1.5 rounded-lg transition-all duration-150 bg-white text-indigo-600 shadow-sm font-semibold"
+          >
+            Todas
+          </button>
+          <button
+            data-filter="pending"
+            class="filter-btn px-3 py-1.5 rounded-lg transition-all duration-150 hover:text-slate-900"
+          >
+            Pendentes
+          </button>
+          <button
+            data-filter="completed"
+            class="filter-btn px-3 py-1.5 rounded-lg transition-all duration-150 hover:text-slate-900"
+          >
+            Concluídas
+          </button>
+        </div>
+
+        <button
+          id="clear-completed-btn"
+          class="text-xs font-medium text-slate-400 hover:text-rose-600 transition-colors duration-150 hidden flex items-center gap-1"
+        >
+          <svg
+            class="w-3.5 h-3.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+            ></path>
+          </svg>
+          Limpar concluídas
+        </button>
+      </div>
+
+      <!-- Lista de Tarefas -->
+      <div class="overflow-y-auto flex-1 pr-1" id="task-scroll-area">
+        <ul id="task-list" class="space-y-2.5">
+          <!-- As tarefas serão renderizadas aqui via JS -->
+        </ul>
+
+        <!-- Estado Vazio (Empty State) -->
+        <div
+          id="empty-state"
+          class="hidden flex flex-col items-center justify-center py-10 text-center"
+        >
+          <div
+            class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mb-3 shadow-inner"
+          >
+            <svg
+              class="w-8 h-8"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.8"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+              ></path>
+            </svg>
+          </div>
+          <h3
+            class="text-slate-700 font-semibold text-base mb-1"
+            id="empty-state-title"
+          >
+            Nenhuma tarefa encontrada
+          </h3>
+          <p
+            class="text-slate-400 text-xs sm:text-sm max-w-xs"
+            id="empty-state-desc"
+          >
+            Aproveite seu tempo livre ou adicione uma nova tarefa para começar o
+            dia!
+          </p>
+        </div>
+      </div>
+
+      <!-- Rodapé de Estatísticas -->
+      <footer
+        class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium"
+      >
+        <div class="flex items-center gap-1.5" id="stats-container">
+          <span id="pending-count" class="font-bold text-indigo-600">0</span>
+          <span id="pending-label">tarefas restantes</span>
+        </div>
+        <div class="text-slate-400 text-[11px]">Salvo automaticamente</div>
+      </footer>
+    </div>
+
+    <script>
+      // --- ESTADO DA APLICAÇÃO ---
+      let tasks = [];
+      let currentFilter = 'all'; // 'all' | 'pending' | 'completed'
+
+      // Chave do LocalStorage
+      const STORAGE_KEY = 'todo_app_tasks_v1';
+
+      // --- ELEMENTOS DO DOM ---
+      const todoForm = document.getElementById('todo-form');
+      const todoInput = document.getElementById('todo-input');
+      const taskList = document.getElementById('task-list');
+      const emptyState = document.getElementById('empty-state');
+      const emptyStateTitle = document.getElementById('empty-state-title');
+      const emptyStateDesc = document.getElementById('empty-state-desc');
+      const pendingCountEl = document.getElementById('pending-count');
+      const pendingLabelEl = document.getElementById('pending-label');
+      const clearCompletedBtn = document.getElementById('clear-completed-btn');
+      const filterBtns = document.querySelectorAll('.filter-btn');
+      const currentDateEl = document.getElementById('current-date');
+      const inputError = document.getElementById('input-error');
+
+      /**
+       * Formata a data atual em Português
+       */
+      function displayCurrentDate() {
+        const options = { weekday: 'long', day: 'numeric', month: 'long' };
+        const today = new Date();
+        const formattedDate = today.toLocaleDateString('pt-BR', options);
+        // Capitaliza a primeira letra do dia
+        currentDateEl.textContent =
+          formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+      }
+
+      /**
+       * Carrega as tarefas salvas do LocalStorage
+       */
+      function loadTasks() {
+        try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            tasks = JSON.parse(stored);
+          } else {
+            // Tarefas de exemplo no primeiro acesso
+            tasks = [
+              {
+                id: Date.now() - 2000,
+                text: 'Conhecer a nova lista de tarefas 🚀',
+                completed: true,
+              },
+              {
+                id: Date.now() - 1000,
+                text: 'Adicionar minhas próprias tarefas',
+                completed: false,
+              },
+            ];
+            saveTasks();
+          }
+        } catch (error) {
+          console.error('Erro ao carregar dados do LocalStorage:', error);
+          tasks = [];
+        }
+      }
+
+      /**
+       * Salva as tarefas atuais no LocalStorage
+       */
+      function saveTasks() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+        } catch (error) {
+          console.error('Erro ao salvar no LocalStorage:', error);
+        }
+      }
+
+      /**
+       * Adiciona uma nova tarefa
+       */
+      function addTask(text) {
+        const cleanText = text.trim();
+        if (!cleanText) {
+          showInputError();
+          return;
+        }
+
+        hideInputError();
+
+        const newTask = {
+          id: Date.now(),
+          text: cleanText,
+          completed: false,
+        };
+
+        tasks.unshift(newTask); // Adiciona no início da lista
+        saveTasks();
+        renderTasks();
+
+        todoInput.value = '';
+        todoInput.focus();
+      }
+
+      /**
+       * Alterna o estado de conclusão de uma tarefa
+       */
+      function toggleTask(id) {
+        tasks = tasks.map((task) => {
+          if (task.id === id) {
+            return { ...task, completed: !task.completed };
+          }
+          return task;
+        });
+
+        saveTasks();
+        renderTasks();
+      }
+
+      /**
+       * Remove uma tarefa com animação
+       */
+      function deleteTask(id, element) {
+        if (element) {
+          element.classList.add('task-exit');
+          setTimeout(() => {
+            tasks = tasks.filter((task) => task.id !== id);
+            saveTasks();
+            renderTasks();
+          }, 200); // Aguarda o fim da transição CSS
+        } else {
+          tasks = tasks.filter((task) => task.id !== id);
+          saveTasks();
+          renderTasks();
+        }
+      }
+
+      /**
+       * Limpa todas as tarefas concluídas
+       */
+      function clearCompleted() {
+        tasks = tasks.filter((task) => !task.completed);
+        saveTasks();
+        renderTasks();
+      }
+
+      /**
+       * Exibe feedback de erro no input
+       */
+      function showInputError() {
+        inputError.classList.remove('hidden');
+        todoInput.parentElement.classList.add('border-rose-400');
+      }
+
+      /**
+       * Oculta feedback de erro
+       */
+      function hideInputError() {
+        inputError.classList.add('hidden');
+        todoInput.parentElement.classList.remove('border-rose-400');
+      }
+
+      /**
+       * Escapa HTML para prevenir ataques XSS
+       */
+      function escapeHtml(string) {
+        const div = document.createElement('div');
+        div.textContent = string;
+        return div.innerHTML;
+      }
+
+      /**
+       * Renderiza a lista de tarefas com base no estado e nos filtros
+       */
+      function renderTasks() {
+        // Filtrar tarefas
+        const filteredTasks = tasks.filter((task) => {
+          if (currentFilter === 'pending') return !task.completed;
+          if (currentFilter === 'completed') return task.completed;
+          return true; // 'all'
+        });
+
+        // Limpar lista atual
+        taskList.innerHTML = '';
+
+        // Verificar se deve exibir Empty State
+        if (filteredTasks.length === 0) {
+          emptyState.classList.remove('hidden');
+
+          if (tasks.length === 0) {
+            emptyStateTitle.textContent = 'Sua lista está vazia';
+            emptyStateDesc.textContent =
+              'Adicione uma tarefa no campo acima para organizar seu dia!';
+          } else if (currentFilter === 'pending') {
+            emptyStateTitle.textContent = 'Tudo em dia!';
+            emptyStateDesc.textContent =
+              'Você não possui nenhuma tarefa pendente no momento.';
+          } else if (currentFilter === 'completed') {
+            emptyStateTitle.textContent = 'Nenhuma concluída';
+            emptyStateDesc.textContent =
+              'Complete algumas tarefas para vê-las listadas aqui.';
+          }
+        } else {
+          emptyState.classList.add('hidden');
+
+          // Renderizar cada elemento da lista
+          filteredTasks.forEach((task) => {
+            const li = document.createElement('li');
+            li.className = `task-item group flex items-center justify-between p-3.5 bg-slate-50/80 hover:bg-slate-100/90 border border-slate-200/70 rounded-2xl transition-all duration-200 ${
+              task.completed ? 'bg-slate-50/40 opacity-75' : ''
+            }`;
+            li.dataset.id = task.id;
+
+            li.innerHTML = `
+                        <div class="flex items-center gap-3 min-w-0 flex-1 pr-2">
+                            <input 
+                                type="checkbox" 
+                                class="custom-checkbox" 
+                                ${task.completed ? 'checked' : ''} 
+                                aria-label="Marcar tarefa como concluída"
+                            >
+                            <span class="text-sm sm:text-base font-medium text-slate-700 break-words transition-all duration-200 select-none ${
+                              task.completed
+                                ? 'line-through text-slate-400 font-normal'
+                                : ''
+                            }">
+                                ${escapeHtml(task.text)}
+                            </span>
+                        </div>
+                        <button 
+                            class="delete-btn opacity-100 sm:opacity-0 group-hover:opacity-100 focus:opacity-100 text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-all duration-150 shrink-0" 
+                            title="Excluir tarefa"
+                            aria-label="Excluir tarefa"
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    `;
+
+            // Evento de Checkbox (Concluir/Desmarcar)
+            const checkbox = li.querySelector('.custom-checkbox');
+            checkbox.addEventListener('change', () => toggleTask(task.id));
+
+            // Evento de Excluir
+            const deleteBtn = li.querySelector('.delete-btn');
+            deleteBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              deleteTask(task.id, li);
+            });
+
+            taskList.appendChild(li);
+          });
+        }
+
+        // Atualizar contadores e botão de limpar concluídas
+        updateFooterStats();
+      }
+
+      /**
+       * Atualiza os contadores no rodapé da aplicação
+       */
+      function updateFooterStats() {
+        const pendingCount = tasks.filter((t) => !t.completed).length;
+        const completedCount = tasks.filter((t) => t.completed).length;
+
+        pendingCountEl.textContent = pendingCount;
+        pendingLabelEl.textContent =
+          pendingCount === 1 ? 'tarefa pendente' : 'tarefas pendentes';
+
+        // Mostrar/Ocultar botão de "Limpar concluídas"
+        if (completedCount > 0) {
+          clearCompletedBtn.classList.remove('hidden');
+        } else {
+          clearCompletedBtn.classList.add('hidden');
+        }
+      }
+
+      // Evento de submissão do formulário
+      todoForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        addTask(todoInput.value);
+      });
+
+      // Ocultar erro ao digitar
+      todoInput.addEventListener('input', () => {
+        if (todoInput.value.trim().length > 0) {
+          hideInputError();
+        }
+      });
+
+      // Alternar abas de filtro
+      filterBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          filterBtns.forEach((b) => {
+            b.classList.remove(
+              'bg-white',
+              'text-indigo-600',
+              'shadow-sm',
+              'font-semibold'
+            );
+            b.classList.add('hover:text-slate-900');
+          });
+
+          btn.classList.add(
+            'bg-white',
+            'text-indigo-600',
+            'shadow-sm',
+            'font-semibold'
+          );
+          btn.classList.remove('hover:text-slate-900');
+
+          currentFilter = btn.dataset.filter;
+          renderTasks();
+        });
+      });
+
+      // Botão para limpar concluídas
+      clearCompletedBtn.addEventListener('click', () => {
+        clearCompleted();
+      });
+
+      // --- INICIALIZAÇÃO ---
+      window.addEventListener('DOMContentLoaded', () => {
+        displayCurrentDate();
+        loadTasks();
+        renderTasks();
+      });
+    </script>
+  </body>
+</html>
